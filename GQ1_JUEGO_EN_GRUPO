@@ -1,0 +1,150 @@
+Es este import pygame
+import random
+
+# Inicializar Pygame
+pygame.init()
+
+# --- Configuración del juego ---
+ANCHO = 800
+ALTO = 600
+VENTANA = pygame.display.set_mode((ANCHO, ALTO))
+pygame.display.set_caption("Carrera de Cohetes Matemáticos")
+
+BLANCO = (255, 255, 255)
+NEGRO = (0, 0, 0)
+AZUL = (0, 0, 255)
+ROJO = (255, 0, 0)
+VERDE = (0, 255, 0)
+
+fuente = pygame.font.Font(None, 40)
+fuente_pequena = pygame.font.Font(None, 30)
+
+class Cohete(pygame.sprite.Sprite):
+    def __init__(self, x, y, color):
+        super().__init__()
+        self.image = pygame.Surface((30, 50))
+        self.image.fill(color)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.posicion_y = y
+
+    def mover(self, velocidad):
+        self.posicion_y += velocidad
+        self.rect.y = self.posicion_y
+
+def generar_problema():
+    num1 = random.randint(1, 10)
+    num2 = random.randint(1, 10)
+    operador = random.choice(['+', '-', '*'])
+    if operador == '+':
+        pregunta = f"{num1} + {num2}"
+        respuesta = num1 + num2
+    elif operador == '-':
+        pregunta = f"{num1} - {num2}"
+        respuesta = num1 - num2
+    else:
+        pregunta = f"{num1} * {num2}"
+        respuesta = num1 * num2
+    return pregunta, respuesta
+
+def dibujar_texto(texto, fuente, color, superficie, x, y):
+    texto_obj = fuente.render(texto, True, color)
+    texto_rect = texto_obj.get_rect()
+    texto_rect.center = (x, y)
+    superficie.blit(texto_obj, texto_rect)
+
+def pantalla_final(mensaje):
+    """Pantalla de fin de juego con mensaje y opción de salir o reiniciar"""
+    esperando = True
+    while esperando:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_RETURN:  
+                    esperando = False
+                elif evento.key == pygame.K_ESCAPE: 
+                    pygame.quit()
+                    exit()
+
+        VENTANA.fill(BLANCO)
+        dibujar_texto(mensaje, fuente, NEGRO, VENTANA, ANCHO // 2, ALTO // 2 - 50)
+        dibujar_texto("Presiona ENTER para jugar de nuevo", fuente_pequena, NEGRO, VENTANA, ANCHO // 2, ALTO // 2)
+        dibujar_texto("Presiona ESC para salir", fuente_pequena, NEGRO, VENTANA, ANCHO // 2, ALTO // 2 + 40)
+        pygame.display.flip()
+
+def bucle_juego():
+    corriendo = True
+    reloj = pygame.time.Clock()
+
+
+    cohete1 = Cohete(ANCHO // 4, ALTO - 50, AZUL)
+    cohete2 = Cohete(ANCHO * 3 // 4, ALTO - 50, ROJO)
+    todos_los_sprites = pygame.sprite.Group(cohete1, cohete2)
+    
+    meta_y = 40
+
+
+    pregunta_actual, respuesta_correcta = generar_problema()
+
+    entrada_usuario = ""
+    mensaje = ""
+    mostrar_mensaje = 0  
+
+    while corriendo:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_RETURN:
+                    try:
+                        respuesta_usuario = int(entrada_usuario)
+                        if respuesta_usuario == respuesta_correcta:
+                            cohete1.mover(-30) 
+                            mensaje = "¡Correcto!"
+                            mostrar_mensaje = 60
+                        else:
+                            mensaje = "Respuesta incorrecta"
+                            mostrar_mensaje = 60
+                    except ValueError:
+                        mensaje = "Ingresa un número válido"
+                        mostrar_mensaje = 60
+
+                    # Genera un nuevo problema
+                    pregunta_actual, respuesta_correcta = generar_problema()
+                    entrada_usuario = ""
+                        
+                elif evento.key == pygame.K_BACKSPACE:
+                    entrada_usuario = entrada_usuario[:-1]
+                else:
+                    entrada_usuario += evento.unicode
+
+        cohete2.mover(-random.choice([0, 0, 0, 1]))
+
+        if cohete1.rect.y <= meta_y:
+            pantalla_final("¡Has ganado!")
+            return bucle_juego()
+        elif cohete2.rect.y <= meta_y:
+            pantalla_final("Perdiste")
+            return bucle_juego()
+
+        VENTANA.fill(BLANCO)
+        
+        pygame.draw.line(VENTANA, AZUL  , (0, meta_y), (ANCHO, meta_y), 5)
+        
+        todos_los_sprites.draw(VENTANA)
+        
+        dibujar_texto("Resuelve:", fuente, NEGRO, VENTANA, ANCHO // 2, 480)
+        dibujar_texto(pregunta_actual, fuente, NEGRO, VENTANA, ANCHO // 2, 520)
+        pygame.draw.rect(VENTANA, AZUL, (ANCHO // 2 - 100, 560, 200, 40), 2)
+        dibujar_texto(entrada_usuario, fuente_pequena, NEGRO, VENTANA, ANCHO // 2, 580)
+        if mostrar_mensaje > 0:
+            dibujar_texto(mensaje, fuente_pequena, ROJO, VENTANA, ANCHO // 2, 430)
+            mostrar_mensaje -= 1
+
+        pygame.display.flip()
+        reloj.tick(70)
+
+bucle_juego()
